@@ -1,7 +1,6 @@
 ﻿using JatHttpLoadGenerator;
 
 var generator = new HttpLoadGenerator();
-
 var exit = string.Empty;
 do
 {
@@ -9,10 +8,19 @@ do
     Console.Write("Concurrent Users: ");
     var concurrentUsers = int.Parse(Console.ReadLine());
 
+    Console.Write("Max Connections: ");
+    generator.MaxConnections = int.Parse(Console.ReadLine());
+
     Console.Write("Time: ");
     var time = int.Parse(Console.ReadLine());
-
-    var loadResult = await generator.ExecuteLoad("https://dummyjson.com/products", concurrentUsers, time);
+    
+    Console.WriteLine("Start");
+    LoadResult? loadResult = await generator.ExecuteLoad("https://dummyjson.com/products", concurrentUsers, time, requestResult =>
+    {
+        // Console.WriteLine($"TaskEnded|UserId:{requestResult.UserId}|Status:{requestResult.Status}|Time:{requestResult.Time}");
+        Console.Write(".");
+    });
+    Console.WriteLine("\nEnd");
 
     if (loadResult == null)
     {
@@ -34,8 +42,11 @@ do
         var totalTimeMessage = string.Join(",", userResultsGroupByStatus.Select(group => $"Total Time: {group.Sum(x => x.Time)}"));
         Console.WriteLine("UserId: {0}|{1}|{2}", userResults.Key, statusCountMessage, totalTimeMessage);
     }
-    Console.WriteLine("Total Requests: {0}|Total Time: {0}ms", loadResult.Results?.Values.Sum(userResults => userResults.Count), loadResult.TotalTimeTaken);
-    
+    var requestsCount = loadResult.Results?.Values.Sum(userResults => userResults.Count);
+    Console.WriteLine($"Total Requests: {requestsCount}|Total Time: {loadResult.TotalTimeTaken}ms");
+
+    Console.WriteLine("Press \"e\" and ENTER to exit");
     exit = Console.ReadLine();
-    if (!string.IsNullOrEmpty(exit) && exit.Contains("e")) break;
+    if (!string.IsNullOrEmpty(exit) && exit.StartsWith("e", StringComparison.InvariantCultureIgnoreCase))
+        break;
 } while (true);

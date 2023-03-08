@@ -1,63 +1,90 @@
 ﻿using System.Diagnostics;
-using System.Net;
 
 namespace JatHttpLoadGenerator;
 public class HttpLoadGenerator
 {
-    static HttpClient? httpClient;
-    public HttpLoadGenerator(HttpMessageHandler? handler = null)
+    private const int defaultMaxConnections = 1;
+    private int maxConnections = defaultMaxConnections;
+    public int MaxConnections
     {
-        httpClient = handler != null ? new HttpClient(handler) : new HttpClient();
+        get
+        {
+            return maxConnections;
+        }
+        set
+        {
+            if (maxConnections != value)
+            {
+                httpClient?.Dispose();
+                httpClient = null;
+            }
+            maxConnections = value;
+        }
     }
 
-    public async Task<LoadResult> ExecuteLoad(string url, int concurrentUsers, int nSeconds = 1)
+    private HttpClient? httpClient;
+
+    public HttpLoadGenerator()
     {
-        ServicePointManager.FindServicePoint(new Uri(url)).ConnectionLimit = concurrentUsers;
+    }
+
+    public HttpLoadGenerator(HttpClient httpClient)
+    {
+        this.httpClient = httpClient;
+    }
+
+    public async Task<LoadResult> ExecuteLoad(string url, int concurrentUsers, int nSeconds = 1, Action<RequestResult>? requestProcessedCallback = null)
+    {
+        if (httpClient == null)
+        {
+            var socketHandler = new SocketsHttpHandler
+            {
+                MaxConnectionsPerServer = maxConnections,
+            };
+            httpClient = new HttpClient(socketHandler);
+        }
 
         var stopwatch = new Stopwatch();
         stopwatch.Start();
 
         var requests = new List<Task<RequestResult>>();
+        var results = new Dictionary<int, List<RequestResult>>();
         foreach (var user in Enumerable.Range(1, concurrentUsers))
         {
-            requests.Add(ExecuteRequest(url, user));
+            requests.Add(AwaitAndProcessAsync(ExecuteRequestAsync(url, user), requestProcessedCallback));
+            results[user] = new List<RequestResult>();
         }
 
-        var results = new Dictionary<int, List<RequestResult>>();
         while (requests.Any())
         {
-            Task<RequestResult> finishedTask = await Task.WhenAny(requests);
-
-            if (results.TryGetValue(finishedTask.Result.UserId, out List<RequestResult>? userResults))
-            {
-                userResults.Add(finishedTask.Result);
-            }
-            else
-            {
-                var newUserResults = new List<RequestResult>
-                {
-                    finishedTask.Result
-                };
-                results.Add(finishedTask.Result.UserId, newUserResults);
-            }
-
+            var finishedTask = await Task.WhenAny(requests);
+            var taskResult = await finishedTask;
+            results[taskResult.UserId].Add(taskResult);
             requests.Remove(finishedTask);
 
             if (stopwatch.ElapsedMilliseconds < nSeconds * 1000)
             {
-                requests.Add(ExecuteRequest(url, finishedTask.Result.UserId));
+                requests.Add(AwaitAndProcessAsync(ExecuteRequestAsync(url, taskResult.UserId), requestProcessedCallback));
             }
         }
-        stopwatch.Stop();
 
+        stopwatch.Stop();
         return new LoadResult
         {
-            TotalTimeTaken = stopwatch.ElapsedMilliseconds,
             Results = results,
+            TotalTimeTaken = stopwatch.ElapsedMilliseconds,
         };
     }
 
-    private async Task<RequestResult> ExecuteRequest(string url, int userId)
+    private async Task<RequestResult> AwaitAndProcessAsync(Task<RequestResult> task, Action<RequestResult>? requestProcessedCallback)
+    {
+        var result = await task;
+        if (requestProcessedCallback != null)
+            requestProcessedCallback.Invoke(result);
+        return result;
+    }
+
+    private async Task<RequestResult> ExecuteRequestAsync(string url, int userId)
     {
         if (httpClient == null)
         {
@@ -70,9 +97,8 @@ public class HttpLoadGenerator
         {
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             var response = await httpClient.SendAsync(request);
-            
-            response.EnsureSuccessStatusCode();
             stopwatch.Stop();
+            
             return new RequestResult
             {
                 UserId = userId,

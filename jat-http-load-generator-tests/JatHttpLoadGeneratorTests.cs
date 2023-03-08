@@ -9,7 +9,7 @@ public class JatHttpLoadGeneratorTests
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
-    public async Task When_GivenNConcurrentUsers_ReturnNResults(int concurrentUsers)
+    public async Task When_GivenNConcurrentUsers_ReturnNUserResults(int concurrentUsers)
     {
 
         var httpMessageHandlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
@@ -20,15 +20,24 @@ public class JatHttpLoadGeneratorTests
             ItExpr.IsAny<CancellationToken>());
 
         setupRequest
-            .Callback(()=> Thread.Sleep(10))
-            .ReturnsAsync(new HttpResponseMessage
+            .Returns(() =>
             {
-                StatusCode = HttpStatusCode.OK,
-                Content = new StringContent(string.Empty),
+                return Task.Delay(TimeSpan.FromMilliseconds(10))
+                    .ContinueWith(task =>
+                    {
+                        return new HttpResponseMessage
+                        {
+                            StatusCode = HttpStatusCode.OK,
+                            Content = new StringContent(string.Empty),
+                        };
+                    });
             });
 
-        var generator = new HttpLoadGenerator(httpMessageHandlerMock.Object);
-        var loadResult = await generator.ExecuteLoad("http://dummy.com", concurrentUsers);
+        var httpClient = new HttpClient(httpMessageHandlerMock.Object);
+        var generator = new HttpLoadGenerator(httpClient);
+        
+        // nSeconds is set to 0 so only the first request of each user gets emulated
+        var loadResult = await generator.ExecuteLoad("http://dummy.com", concurrentUsers, nSeconds: 0);
 
         Assert.NotNull(loadResult);
         var usersResults = loadResult.Results;
