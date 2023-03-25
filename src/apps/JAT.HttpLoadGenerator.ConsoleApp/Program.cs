@@ -6,13 +6,13 @@ do
 {
     Console.Clear();
     Console.Write("Concurrent Users: ");
-    var concurrentUsers = int.Parse(Console.ReadLine());
+    var concurrentUsers = int.Parse(Console.ReadLine() ?? "0");
 
     Console.Write("Max Connections: ");
-    generator.MaxConnections = int.Parse(Console.ReadLine());
+    generator.MaxConnections = int.Parse(Console.ReadLine() ?? "0");
 
     Console.Write("Time: ");
-    var time = int.Parse(Console.ReadLine());
+    var time = int.Parse(Console.ReadLine() ?? "0");
     
     Console.WriteLine("Start");
     LoadResult? loadResult = await generator.ExecuteLoad("https://dummyjson.com/products", concurrentUsers, time, requestResult =>
