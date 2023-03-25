@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace JatHttpLoadGenerator;
+namespace JAT.HttpLoadGenerator;
 public class RequestResult
 {
     public int UserId { get; set; }

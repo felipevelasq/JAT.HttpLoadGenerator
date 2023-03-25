@@ -10,9 +10,9 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/jat-console-app/bin/Debug/net6.0/jat-console-app.dll",
+            "program": "${workspaceFolder}/src/apps/JAT.HttpLoadGenerator.ConsoleApp/bin/Debug/net6.0/JAT.HttpLoadGenerator.ConsoleApp.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/jat-console-app",
+            "cwd": "${workspaceFolder}/src/apps/JAT.HttpLoadGenerator.ConsoleApp",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
             "stopAtEntry": false

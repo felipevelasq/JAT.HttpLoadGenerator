@@ -2,7 +2,7 @@ using System.Net;
 using Moq;
 using Moq.Protected;
 
-namespace JatHttpLoadGenerator.Tests;
+namespace JAT.HttpLoadGenerator.Tests;
 
 public class JatHttpLoadGeneratorTests
 {

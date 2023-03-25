@@ -1,4 +1,4 @@
-﻿using JatHttpLoadGenerator;
+﻿using JAT.HttpLoadGenerator;
 
 var generator = new HttpLoadGenerator();
 var exit = string.Empty;

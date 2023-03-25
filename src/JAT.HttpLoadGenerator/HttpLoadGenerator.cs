@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace JatHttpLoadGenerator;
+namespace JAT.HttpLoadGenerator;
 public class HttpLoadGenerator
 {
     private const int defaultMaxConnections = 1;
